@@ -29,12 +29,11 @@ void read_dataset(const std::string& filename, dataset& ds) {
 
     std::string line;
 
-    getline (file,line);
+    getline(file,line);
     std::vector<std::string> columns;
     boost::algorithm::split(columns, line, boost::is_any_of(","));
 
-//    target_type targets;
-    while (getline (file,line)) {
+    while (getline(file,line)) {
         std::vector<std::string> values_str;
         std::vector<bool> values_bool;
         boost::algorithm::split(values_str, line, boost::is_any_of(","));
@@ -50,7 +49,7 @@ void read_dataset(const std::string& filename, dataset& ds) {
     file.close();
 }
 
-double calc_info_entropy(const std::vector<int>& targets) {
+double calc_info_entropy(const target_type& targets) {
     double s = 0.0;
     if (targets.empty()) return s;
 
@@ -70,8 +69,8 @@ double calc_info_entropy(const std::vector<int>& targets) {
 
 double calc_info_gain(
         double s0,
-        target_type& left_target,
-        target_type& right_target
+        const target_type& left_target,
+        const target_type& right_target
     ) {
 
     double s1 = calc_info_entropy(left_target);
@@ -253,12 +252,19 @@ public:
 
 
 class Tree {
+    double entropy_threshold_m = 0.0;
+    int max_depth_m;
+
 public:
     std::shared_ptr<TreeNode> root_m;
-    explicit Tree() = default;
+
+    Tree(double entropy_threshold, int max_depth)
+        : entropy_threshold_m(entropy_threshold)
+        , max_depth_m(max_depth)
+    {}
 
     void fit(dataset& tr_ds) {
-        root_m = std::make_shared<TreeNode>(tr_ds, 0.5, 1, 10);
+        root_m = std::make_shared<TreeNode>(tr_ds, entropy_threshold_m, 1, max_depth_m);
     }
 
     target_type predict(feature_matrix_type& X) const {
@@ -275,7 +281,6 @@ public:
 
         while(true) {
             if (node->left_m == nullptr && node->right_m == nullptr) break;
-
             if (x[node->ftr_to_split_m]) {
                 if (node->left_m == nullptr) break;
                 node = node->left_m;
@@ -301,11 +306,12 @@ double accuracy_score(target_type& y_true, target_type& y_pred) {
     int tp = std::accumulate(is_equal.begin(), is_equal.end(), 0);
     return static_cast<double>(tp) / n;
 }
+
+
 //class BaggingTree {
 //public:
 //
 //};
-
 
 
 int main() {
@@ -323,7 +329,7 @@ int main() {
     std::cout << train_dataset.y.size() << std::endl;
 
 
-    Tree model{};
+    Tree model(0.5, 4);
     model.fit(train_dataset);
 
 //    for (auto& p: preds) {
