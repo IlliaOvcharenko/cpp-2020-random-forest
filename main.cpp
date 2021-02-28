@@ -4,20 +4,21 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 #include <algorithm>
 #include <memory>
 #include <cmath>
+#include <numeric>
 
 #include <boost/algorithm/string.hpp>
 
-typedef std::vector<std::vector<bool>> feature_type;
+typedef std::vector<bool> feature_type;
+typedef std::vector<feature_type> feature_matrix_type;
 typedef std::vector<int> target_type;
 
 struct dataset {
-    feature_type X;
+    feature_matrix_type X;
     target_type y;
-
-    dataset(): X(0), y(0) {}
 };
 
 void read_dataset(const std::string& filename, dataset& ds) {
@@ -29,57 +30,41 @@ void read_dataset(const std::string& filename, dataset& ds) {
     std::string line;
 
     getline (file,line);
-    std::vector<std::string> columns(0);
+    std::vector<std::string> columns;
     boost::algorithm::split(columns, line, boost::is_any_of(","));
 
-//    target_type targets(0);
+//    target_type targets;
     while (getline (file,line)) {
-        std::vector<std::string> values_str(0);
-        std::vector<bool> values_float(0);
+        std::vector<std::string> values_str;
+        std::vector<bool> values_bool;
         boost::algorithm::split(values_str, line, boost::is_any_of(","));
 
         ds.y.push_back(std::stoi(values_str.back()));
         values_str.pop_back();
 
         for (const auto& val: values_str) {
-            values_float.push_back(std::stoi(val));
+            values_bool.push_back(std::stoi(val));
         }
-        ds.X.push_back(values_float);
+        ds.X.push_back(values_bool);
     }
     file.close();
-//    ds.y = targets;
 }
 
 double calc_info_entropy(const std::vector<int>& targets) {
-    std::cout << (double)(targets.size()) << std::endl;
-
     double s = 0.0;
-
-//    std::cout << "calc info entropy" << std::endl;
-//    std::cout << targets.size() << std::endl;
     if (targets.empty()) return s;
-//    for (auto& el: targets) {
-//        std::cout << el << " ";
-//    }
-//    std::cout << std::endl;
-    int n_classes = *std::max_element(targets.begin(), targets.end()) + 1;
-//    std::cout << "calc info entropy 2" << std::endl;
 
-    std::vector<int> count(n_classes, 0);
+    std::map<int, int> count;
     for (const auto& t: targets) {
         ++count[t];
     }
 
-    for (int cls = 0; cls < n_classes; ++cls) {
-        std::cout << "cls: " << cls << " count: " << count[cls] << std::endl;
-        int n_target = targets.size();
-        std::cout << (double)(n_target) << std::endl;
-        std::cout << static_cast<double>(count[cls]) / targets.size() << std::endl;
-        double p = static_cast<double>(count[cls]) / targets.size();
-        std::cout << "prob: " << p << " " << count[cls] << " " << targets.size() << std::endl;
+    for (auto& c: count) {
+        double p = static_cast<double>(c.second) / targets.size();
         if (p <= 0.0) continue;
         s -= p * log2(p);
     }
+
     return s;
 }
 
@@ -88,7 +73,6 @@ double calc_info_gain(
         target_type& left_target,
         target_type& right_target
     ) {
-    std::cout << "calc info gain " << std::endl;
 
     double s1 = calc_info_entropy(left_target);
     double s2 = calc_info_entropy(right_target);
@@ -105,25 +89,44 @@ class TreeNode {
 public:
     std::shared_ptr<TreeNode> left_m;
     std::shared_ptr<TreeNode> right_m;
-    float entropy_threshold_m = 0.0;
+
     std::vector<int> objects_m;
-    dataset& ds_m;
     std::vector<bool> used_features_m;
-    int ftr_to_split_m;
+    int num_used_features_m = 0;
+
+    dataset& ds_m;
+    int ftr_to_split_m{};
+
+    int depth_m;
+    int max_depth_m;
+
+    double node_entropy = 0.0;
+    double entropy_threshold_m = 0.0;
 
 
-    explicit TreeNode(dataset& ds, std::vector<int> objects, std::vector<bool> used_features, float entropy_threshold)
+    explicit TreeNode(
+            dataset& ds,
+            std::vector<int> objects,
+            std::vector<bool> used_features,
+            double entropy_threshold,
+            int depth,
+            int max_depth
+        )
         : ds_m(ds)
         , entropy_threshold_m(entropy_threshold)
         , objects_m(std::move(objects))
         , used_features_m(std::move(used_features))
+        , depth_m(depth)
+        , max_depth_m(max_depth)
         {
         build();
     }
 
-    explicit TreeNode(dataset& ds, float entropy_threshold)
+    explicit TreeNode(dataset& ds, double entropy_threshold, int depth, int max_depth)
             : ds_m(ds)
             , entropy_threshold_m(entropy_threshold)
+            , depth_m(depth)
+            , max_depth_m(max_depth)
     {
         for (int i = 0; i < ds_m.X.size(); i++) {
             objects_m.push_back(i);
@@ -133,155 +136,116 @@ public:
         build();
     }
 
-    void build() {
-        // TODO calculate initial entropy
-        // TODO calculate information for every feature
-        // TODO select feature with biggest IG
-        // TODO create left and right children
-
-        std::cout << "build node" << std::endl;
-        target_type node_targets(objects_m.size(), 0);
-        for (int i = 0; i < objects_m.size(); ++i) {
-            node_targets[i] = ds_m.y[objects_m[i]];
-        }
-//        std::cout << objects_m.size() << std::endl;
-//        std::cout << (double)(objects_m.size()) << std::endl;
-        std::cout << ds_m.y.size() << std::endl;
-        std::cout << static_cast<double>(ds_m.y.size()) << std::endl;
-        std::cout << node_targets.size() << std::endl;
-        std::cout << (double)(node_targets.size()) << std::endl;
-
-//        for (auto& obj: objects_m) {
-//            node_targets.push_back(ds_m.y[obj]);
-//        }
-//        std::transform(
-//                objects_m.begin(), objects_m.end(),
-//                std::back_inserter(node_targets),
-//                [this](size_t pos) { return ds_m.y[pos]; }
-//        );
-        std::cout << "build node 1" << std::endl;
-
-//        for (auto& t: node_targets) {
-//            std::cout << t << " ";
-//        }
-//        std::cout << std::endl;
-
-        double node_entropy = calc_info_entropy(node_targets);
-        std::cout << "node entropy: " << node_entropy << std::endl;
+    bool check_stop_criteria() {
         bool all_used = std::all_of(used_features_m.begin(), used_features_m.end(), [](bool v) { return v; });
-        std::cout << "all used: " << all_used << std::endl;
 
-        if (all_used || node_entropy < entropy_threshold_m) {
-            return;
+        if (all_used) {
+//            std::cout << "all feature used" << std::endl;
+            return true;
+        } else if (node_entropy < entropy_threshold_m) {
+//            std::cout << "node entropy is small enough" << std::endl;
+            return true;
+        } else if (depth_m >= max_depth_m) {
+//            std::cout << "max depth exceeded" << std::endl;
+            return true;
         }
 
-        std::vector<double> info_gains(0);
-        for (int ftr = 0; ftr < ds_m.X[0].size(); ++ftr) {
-            if (used_features_m[ftr]) continue;
+        return false;
+    }
 
-            std::vector<int> left_objects(0);
-            std::copy_if(
-                    objects_m.begin(), objects_m.end(),
-                    std::back_inserter(left_objects),
-                    [this, ftr](int pos){ return ds_m.X[pos][ftr]; }
-            );
-            target_type left_target(0);
-            std::transform(
-                    left_objects.begin(), left_objects.end(),
-                    std::back_inserter(left_target),
-                    [this](size_t pos) { return ds_m.y[pos]; }
-            );
-            std::cout << "there1" << std::endl;
-
-
-            std::vector<int> right_objects(0);
-            std::copy_if(
-                    objects_m.begin(), objects_m.end(),
-                    std::back_inserter(right_objects),
-                    [this, ftr](int pos){ return !ds_m.X[pos][ftr]; }
-            );
-            target_type right_target(0);
-            std::transform(
-                    right_objects.begin(), right_objects.end(),
-                    std::back_inserter(right_target),
-                    [this](size_t pos) { return ds_m.y[pos]; }
-            );
-            std::cout << "there2" << std::endl;
-
-            info_gains.push_back(calc_info_gain(
-                    node_entropy,
-                    left_target,
-                    right_target
-            ));
-
-            std::cout << "there3" << std::endl;
-
-
-        }
-
-        std::cout << "information gain:" << std::endl;
-        for (auto& ig: info_gains) {
-            std::cout << ig << " ";
-        }
-        std::cout << std::endl;
-
-        ftr_to_split_m = std::distance(
-                info_gains.begin(),
-                std::max_element(info_gains.begin(), info_gains.end())
-        );
-        std::cout << "feature to split: " << ftr_to_split_m << std::endl;
-
-        std::vector<int> left_objects(0);
+    std::vector<int> get_leaf_objects(int ftr, bool get_true) {
+        std::vector<int> leaf_objects;
         std::copy_if(
-                objects_m.begin(), objects_m.end(),
-                std::back_inserter(left_objects),
-                [this](int pos){ return ds_m.X[pos][ftr_to_split_m]; }
+            objects_m.begin(), objects_m.end(),
+            std::back_inserter(leaf_objects),
+            [this, ftr, get_true](int pos){ return get_true == ds_m.X[pos][ftr]; }
         );
+        return leaf_objects;
+    }
 
-        if (!left_objects.empty()) {
-            std::cout << "build left node" << std::endl;
-            std::vector<bool> left_used_features;
-            std::copy(used_features_m.begin(), used_features_m.end(), std::back_inserter(left_used_features));
-            left_used_features[ftr_to_split_m] = true;
-            left_m = std::make_shared<TreeNode>(ds_m, left_objects, left_used_features, entropy_threshold_m);
-        }
-
-        std::vector<int> right_objects(0);
-        std::copy_if(
-                objects_m.begin(), objects_m.end(),
-                std::back_inserter(right_objects),
-                [this](int pos){ return !ds_m.X[pos][ftr_to_split_m]; }
+    target_type get_leaf_targets(std::vector<int>& leaf_objects) {
+        target_type leaf_targets;
+        std::transform(
+            leaf_objects.begin(), leaf_objects.end(),
+            std::back_inserter(leaf_targets),
+            [this](size_t pos) { return ds_m.y[pos]; }
         );
+        return leaf_targets;
+    }
 
-        if (!right_objects.empty()) {
-            std::cout << "build right node" << std::endl;
+    void add_leaf(std::shared_ptr<TreeNode>& leaf, bool is_left) {
+        std::vector<int> leaf_objects = get_leaf_objects(ftr_to_split_m, is_left);
+        if (!leaf_objects.empty()) {
+            std::vector<bool> leaf_used_features;
+            std::copy(
+                    used_features_m.begin(), used_features_m.end(),
+                    std::back_inserter(leaf_used_features)
+            );
+            leaf_used_features[ftr_to_split_m] = true;
 
-            std::vector<bool> right_used_features;
-            std::copy(used_features_m.begin(), used_features_m.end(), right_used_features.begin());
-            right_used_features[ftr_to_split_m] = true;
-            right_m = std::make_shared<TreeNode>(ds_m, right_objects, right_used_features, entropy_threshold_m);
+            leaf = std::make_shared<TreeNode>(
+                    ds_m,
+                    leaf_objects,
+                    leaf_used_features,
+                    entropy_threshold_m,
+                    depth_m+1, max_depth_m
+            );
         }
     }
 
-    int get_answer() {
-        // TODO select object and get mean target
-        target_type node_targets;
-        std::transform(
-                objects_m.begin(), objects_m.end(),
-                std::back_inserter(node_targets),
-                [this](size_t pos) { return ds_m.y[pos]; }
-        );
+    void build() {
+        target_type node_targets = get_leaf_targets(objects_m);
 
-        int n_classes = *std::max_element(node_targets.begin(), node_targets.end()) + 1;
-        std::vector<int> count(n_classes, 0);
-        for (auto& t: node_targets) {
-            ++count[t];
+        node_entropy = calc_info_entropy(node_targets);
+        num_used_features_m = std::accumulate(used_features_m.begin(), used_features_m.end(), 0);
+
+        if (check_stop_criteria()) {
+            return;
         }
 
-        int answer = std::distance(
-                count.begin(),
-                std::max_element(count.begin(), count.end())
+        std::map<int, double> info_gains;
+        for (int ftr = 0; ftr < ds_m.X[0].size(); ++ftr) {
+            if (used_features_m[ftr]) continue;
+
+            std::vector<int> left_objects = get_leaf_objects(ftr, true);
+            target_type left_target = get_leaf_targets(left_objects);
+
+            std::vector<int> right_objects = get_leaf_objects(ftr, false);
+            target_type right_target = get_leaf_targets(right_objects);
+
+            info_gains[ftr] = calc_info_gain(
+                node_entropy,
+                left_target,
+                right_target
+            );
+        }
+
+        ftr_to_split_m = std::max_element(
+            info_gains.begin(), info_gains.end(),
+            [](auto& a, auto& b) { return a.second < b.second; }
+        )->first;
+
+        add_leaf(left_m, true);
+        add_leaf(right_m, false);
+    }
+
+    int get_answer() {
+        target_type node_targets;
+            std::transform(
+            objects_m.begin(), objects_m.end(),
+            std::back_inserter(node_targets),
+            [this](size_t pos) { return ds_m.y[pos]; }
         );
+
+        std::map<int, int> answers;
+        for (auto& t: node_targets) {
+            ++answers[t];
+        }
+
+        int answer = std::max_element(
+            answers.begin(), answers.end(),
+            [](auto& a, auto& b) { return a.second < b.second; }
+        )->first;
 
         return answer;
     }
@@ -294,10 +258,10 @@ public:
     explicit Tree() = default;
 
     void fit(dataset& tr_ds) {
-        root_m = std::make_shared<TreeNode>(tr_ds, 0.5);
+        root_m = std::make_shared<TreeNode>(tr_ds, 0.5, 1, 10);
     }
 
-    target_type predict(feature_type& X) {
+    target_type predict(feature_matrix_type& X) const {
         target_type preds;
 
         for (auto& x: X) {
@@ -306,7 +270,7 @@ public:
         return preds;
     }
 
-    int predict(std::vector<bool>& x) {
+    int predict(feature_type& x) const {
         std::shared_ptr<TreeNode> node(root_m);
 
         while(true) {
@@ -325,6 +289,18 @@ public:
     }
 };
 
+
+double accuracy_score(target_type& y_true, target_type& y_pred) {
+    // TODO add assert in case of different sizes
+    int n = y_true.size();
+    std::vector<bool> is_equal(n, false);
+    for (int i = 0; i < n; ++i) {
+        is_equal[i] = (y_true[i] == y_pred[i]);
+    }
+
+    int tp = std::accumulate(is_equal.begin(), is_equal.end(), 0);
+    return static_cast<double>(tp) / n;
+}
 //class BaggingTree {
 //public:
 //
@@ -350,15 +326,18 @@ int main() {
     Tree model{};
     model.fit(train_dataset);
 
-//    for (auto& el: train_dataset.X[0]) {
-//        std::cout << el << " ";
+//    for (auto& p: preds) {
+//        std::cout << p << " ";
 //    }
 //    std::cout << std::endl;
-//
-//
-//    for (auto& el: train_dataset.y) {
-//        std::cout << el << " ";
-//    }
-//    std::cout << std::endl;
+
+    auto train_preds = model.predict(train_dataset.X);
+    auto train_score = accuracy_score(train_dataset.y, train_preds);
+    std::cout << "train score: " << train_score << std::endl;
+
+    auto val_preds = model.predict(val_dataset.X);
+    auto val_score = accuracy_score(val_dataset.y, val_preds);
+    std::cout << "validation score: " << val_score << std::endl;
+
     return 0;
 }

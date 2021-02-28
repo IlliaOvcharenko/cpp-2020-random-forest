@@ -14,3 +14,6 @@ add_executable(cpp_2020_random_forest main.cpp)
 target_link_libraries(cpp_2020_random_forest ${Boost_LIBRARIES})
 target_link_libraries(cpp_2020_random_forest Threads::Threads)
 include_directories( ${Boost_INCLUDE_DIRS} )
+
+add_executable(sandbox sandbox.cpp)
+
