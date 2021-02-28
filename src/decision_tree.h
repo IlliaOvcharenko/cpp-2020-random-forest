@@ -26,16 +26,11 @@ double calc_info_gain(
 
 
 class TreeNode {
-public:
-    std::shared_ptr<TreeNode> left_m;
-    std::shared_ptr<TreeNode> right_m;
-
     std::vector<int> objects_m;
     std::vector<bool> used_features_m;
     int num_used_features_m = 0;
 
     dataset& ds_m;
-    int ftr_to_split_m{};
 
     int depth_m;
     int max_depth_m;
@@ -43,6 +38,11 @@ public:
     double node_entropy = 0.0;
     double entropy_threshold_m = 0.0;
 
+public:
+    std::shared_ptr<TreeNode> left_m;
+    std::shared_ptr<TreeNode> right_m;
+
+    int ftr_to_split_m{};
 
     explicit TreeNode(
             dataset& ds,
@@ -72,10 +72,9 @@ public:
 class Tree {
     double entropy_threshold_m = 0.0;
     int max_depth_m;
-
-public:
     std::shared_ptr<TreeNode> root_m;
 
+public:
     Tree(double entropy_threshold, int max_depth);
 
     void fit(dataset& tr_ds);
