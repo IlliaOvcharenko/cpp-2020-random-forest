@@ -6,10 +6,22 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
-#find_package(Boost REQUIRED COMPONENTS algorithm)
+find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
-add_executable(cpp_2020_random_forest main.cpp)
+add_executable(
+        cpp_2020_random_forest
+        main.cpp
+
+        src/decision_tree.cpp
+        src/decision_tree.h
+
+        src/data.cpp
+        src/data.h
+
+        src/metrics.cpp
+        src/metrics.h
+)
 
 target_link_libraries(cpp_2020_random_forest ${Boost_LIBRARIES})
 target_link_libraries(cpp_2020_random_forest Threads::Threads)
