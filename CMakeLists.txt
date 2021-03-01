@@ -21,7 +21,9 @@ add_executable(
 
         src/metrics.cpp
         src/metrics.h
-)
+
+        src/time_measurement.h
+        src/random_forest.cpp src/random_forest.h)
 
 target_link_libraries(cpp_2020_random_forest ${Boost_LIBRARIES})
 target_link_libraries(cpp_2020_random_forest Threads::Threads)
