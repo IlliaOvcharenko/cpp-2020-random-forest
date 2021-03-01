@@ -23,7 +23,6 @@ public:
 };
 
 class RandomForest {
-public:
     std::vector<Tree> trees_m;
     int max_depth_m;
     int random_state_m;
@@ -33,7 +32,7 @@ public:
 
     int n_jobs_m;
 
-
+public:
     RandomForest(int n_estimators, double entropy_threshold, int max_depth, int random_state, int n_jobs);
 
     void fit(dataset& tr_ds);
