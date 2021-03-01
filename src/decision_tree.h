@@ -71,13 +71,21 @@ public:
 
 class Tree {
     double entropy_threshold_m = 0.0;
-    int max_depth_m;
+    int max_depth_m = 0.0;
     std::shared_ptr<TreeNode> root_m;
 
 public:
+    Tree() = default;
+
     Tree(double entropy_threshold, int max_depth);
 
     void fit(dataset& tr_ds);
+
+    void fit(
+        dataset& tr_ds,
+        std::vector<int>&& objects,
+        std::vector<bool>&& used_features
+    );
 
     target_type predict(feature_matrix_type& X) const;
 

@@ -191,6 +191,21 @@ void Tree::fit(dataset& tr_ds) {
     root_m = std::make_shared<TreeNode>(tr_ds, entropy_threshold_m, 1, max_depth_m);
 }
 
+void Tree::fit(
+        dataset& tr_ds,
+        std::vector<int>&& objects,
+        std::vector<bool>&& used_features
+) {
+    root_m = std::make_shared<TreeNode>(
+        tr_ds,
+        objects,
+        used_features,
+        entropy_threshold_m,
+        1, max_depth_m
+    );
+}
+
+
 target_type Tree::predict(feature_matrix_type& X) const {
     target_type preds;
 
