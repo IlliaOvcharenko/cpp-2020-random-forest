@@ -37,9 +37,9 @@ public:
 
     void fit(dataset& tr_ds);
 
-    void build_trees(dataset& tr_ds, tree_queue& todo_trees, tree_queue& out_trees, int seed);
+    void build_trees(dataset& tr_ds, tree_queue& todo_trees, tree_queue& out_trees);
 
-    std::vector<int> generate_subset(int len);
+    std::vector<int> generate_subset(int len, random_gen_type& random_gen);
 
     target_type predict(feature_matrix_type& X);
 

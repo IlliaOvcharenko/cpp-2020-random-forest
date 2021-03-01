@@ -42,6 +42,7 @@ TreeNode::TreeNode(
     double entropy_threshold,
     int depth,
     int max_depth,
+    random_gen_type& random_gen,
     bool use_random_features
 )
     : ds_m(ds)
@@ -50,6 +51,7 @@ TreeNode::TreeNode(
     , used_features_m(std::move(used_features))
     , depth_m(depth)
     , max_depth_m(max_depth)
+    , random_gen_m(random_gen)
     , use_random_features_m(use_random_features)
 {
     build();
@@ -61,12 +63,14 @@ TreeNode::TreeNode(
     double entropy_threshold,
     int depth,
     int max_depth,
+    random_gen_type& random_gen,
     bool use_random_features
 )
     : ds_m(ds)
     , entropy_threshold_m(entropy_threshold)
     , depth_m(depth)
     , max_depth_m(max_depth)
+    , random_gen_m(random_gen)
     , use_random_features_m(use_random_features)
 {
     for (int i = 0; i < ds_m.X.size(); i++) {
@@ -129,6 +133,7 @@ void TreeNode::add_leaf(std::shared_ptr<TreeNode>& leaf, bool is_left) {
                 leaf_used_features,
                 entropy_threshold_m,
                 depth_m+1, max_depth_m,
+                random_gen_m,
                 use_random_features_m
         );
     }
@@ -139,7 +144,9 @@ std::vector<bool> TreeNode::generate_feature_mask(int n_features, int n_leave) {
     int n_filled = 0;
 
     while ((n_features - n_filled) > n_leave) {
-        int pos = rand() % n_features;
+        std::uniform_int_distribution<> uid(0, n_features-1);
+        int pos = uid(random_gen_m);
+
         feature_mask[pos] = true;
         n_filled = std::accumulate(feature_mask.begin(), feature_mask.end(), 0);
     }
@@ -219,10 +226,17 @@ int TreeNode::get_answer() {
 }
 
 
-Tree::Tree(double entropy_threshold, int max_depth, bool use_random_features)
+Tree::Tree(
+        double entropy_threshold,
+        int max_depth,
+        bool use_random_features,
+        int random_state
+)
         : entropy_threshold_m(entropy_threshold)
         , max_depth_m(max_depth)
         , use_random_features_m(use_random_features)
+        , random_state_m(random_state)
+        , random_gen_m(random_gen_type(random_state_m))
 {}
 
 void Tree::fit(dataset& tr_ds) {
@@ -230,6 +244,7 @@ void Tree::fit(dataset& tr_ds) {
         tr_ds,
         entropy_threshold_m,
         1, max_depth_m,
+        random_gen_m,
         use_random_features_m
     );
 }
@@ -245,6 +260,7 @@ void Tree::fit(
         used_features,
         entropy_threshold_m,
         1, max_depth_m,
+        random_gen_m,
         use_random_features_m
     );
 }

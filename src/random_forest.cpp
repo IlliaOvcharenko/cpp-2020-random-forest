@@ -29,18 +29,22 @@ void RandomForest::fit(dataset& tr_ds) {
     tree_queue out_trees;
 
     for (int i = 0; i < n_estimators_m; ++i) {
-        todo_trees.base_queue_m.push(Tree(entropy_threshold_m, max_depth_m, true));
+        todo_trees.base_queue_m.push(Tree(
+            entropy_threshold_m,
+            max_depth_m,
+            true,
+            random_state_m + i
+        ));
     }
 
     std::vector<std::thread> build_tree_threads;
     for (int j = 0; j < n_jobs_m; ++j) {
         build_tree_threads.emplace_back(
-                &RandomForest::build_trees,
-                this,
-                std::ref(tr_ds),
-                std::ref(todo_trees),
-                std::ref(out_trees),
-                random_state_m + j
+            &RandomForest::build_trees,
+            this,
+            std::ref(tr_ds),
+            std::ref(todo_trees),
+            std::ref(out_trees)
         );
     }
 
@@ -54,27 +58,29 @@ void RandomForest::fit(dataset& tr_ds) {
     }
 }
 
-void RandomForest::build_trees(dataset& tr_ds, tree_queue& todo_trees, tree_queue& out_trees, int seed) {
+void RandomForest::build_trees(dataset& tr_ds, tree_queue& todo_trees, tree_queue& out_trees) {
 //    std::cout << seed << std::endl;
-    srand(seed);
-
+//    srand(seed);
     while(true) {
-        std::vector<int> objects_subset = generate_subset(tr_ds.X.size());
+        Tree tree;
+        if(!todo_trees.pop(tree)) { break; }
+
+        random_gen_type gen(tree.random_state_m);
+        std::vector<int> objects_subset = generate_subset(tr_ds.X.size(), gen);
 
         int n_features = tr_ds.X[0].size();
         std::vector<bool> feature_mask(n_features, false);
 
-        Tree tree;
-        if(!todo_trees.pop(tree)) { break; }
         tree.fit(tr_ds, std::move(objects_subset), std::move(feature_mask));
         out_trees.push(std::move(tree));
     }
 }
 
-std::vector<int> RandomForest::generate_subset(int len) {
+std::vector<int> RandomForest::generate_subset(int len, random_gen_type& random_gen) {
     std::vector<int> subset;
+    std::uniform_int_distribution<> uid(0, len-1);
     for (int i = 0; i < len; ++i) {
-        subset.push_back(rand() % len);
+        subset.push_back(uid(random_gen));
     }
     return subset;
 }

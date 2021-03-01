@@ -4,6 +4,7 @@
 #include <functional>
 #include <cstdlib>
 #include <numeric>
+#include <random>
 
 
 void just_vector_function(std::vector<std::vector<int>>& v) {
@@ -80,8 +81,21 @@ int main() {
 //    srand(42);
 //    std::cout << rand() << " " << RAND_MAX << std::endl;
 
-    for (auto v: generate_feature_mask(10, 3)) {
-        std::cout << v << std::endl;
+//    for (auto v: generate_feature_mask(10, 3)) {
+//        std::cout << v << std::endl;
+//    }
+
+    std::mt19937 gen(42);
+    std::uniform_int_distribution<> uid1(0, 10);
+    for (int i = 0; i < 10; ++i) {
+        std::cout << uid1(gen) << " ";
     }
+    std::cout << std::endl;
+
+    std::uniform_int_distribution<> uid2(0, 10);
+    for (int i = 0; i < 10; ++i) {
+        std::cout << uid2(gen) << " ";
+    }
+    std::cout << std::endl;
     return 0;
 }

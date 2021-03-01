@@ -19,7 +19,7 @@ int main() {
     read_dataset(val_dataset_filename, val_dataset);
 
     auto start_time = get_current_time_fenced();
-//    Tree model(0.1, 10, true);
+//    Tree model(0.1, 10, true, 17);
     RandomForest model(20, 0.1, 20, 42, 4);
     model.fit(train_dataset);
 

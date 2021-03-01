@@ -13,6 +13,7 @@
 #include <cmath>
 #include <numeric>
 #include <cstdlib>
+#include <random>
 
 #include "data.h"
 
@@ -25,6 +26,7 @@ double calc_info_gain(
         const target_type& right_target
 );
 
+typedef std::mt19937 random_gen_type;
 
 class TreeNode {
     std::vector<int> objects_m;
@@ -40,6 +42,7 @@ class TreeNode {
     double entropy_threshold_m = 0.0;
 
     bool use_random_features_m;
+    random_gen_type& random_gen_m;
 
 public:
     std::shared_ptr<TreeNode> left_m;
@@ -54,6 +57,7 @@ public:
         double entropy_threshold,
         int depth,
         int max_depth,
+        random_gen_type& random_gen,
         bool use_random_features=false
     );
 
@@ -62,6 +66,7 @@ public:
         double entropy_threshold,
         int depth,
         int max_depth,
+        random_gen_type& random_gen,
         bool use_random_features=false
     );
 
@@ -86,11 +91,14 @@ class Tree {
     int max_depth_m = 0.0;
     std::shared_ptr<TreeNode> root_m;
     bool use_random_features_m = false;
+    random_gen_type random_gen_m;
 
 public:
+    int random_state_m;
+
     Tree() = default;
 
-    Tree(double entropy_threshold, int max_depth, bool use_random_features=false);
+    Tree(double entropy_threshold, int max_depth, bool use_random_features=false, int random_state=42);
 
     void fit(dataset& tr_ds);
 
