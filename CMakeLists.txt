@@ -23,7 +23,10 @@ add_executable(
         src/metrics.h
 
         src/time_measurement.h
-        src/random_forest.cpp src/random_forest.h)
+
+        src/random_forest.cpp
+        src/random_forest.h
+)
 
 target_link_libraries(cpp_2020_random_forest ${Boost_LIBRARIES})
 target_link_libraries(cpp_2020_random_forest Threads::Threads)
@@ -31,3 +34,27 @@ include_directories( ${Boost_INCLUDE_DIRS} )
 
 add_executable(sandbox sandbox.cpp)
 
+add_executable(
+        performance_test
+        performance_test.cpp
+
+        src/decision_tree.cpp
+        src/decision_tree.h
+
+        src/data.cpp
+        src/data.h
+
+        src/metrics.cpp
+        src/metrics.h
+
+        src/time_measurement.h
+
+        src/random_forest.cpp
+        src/random_forest.h
+
+        src/csv_writer.cpp
+        src/csv_writer.h
+)
+
+target_link_libraries(performance_test ${Boost_LIBRARIES})
+target_link_libraries(performance_test Threads::Threads)
