@@ -55,7 +55,7 @@ public:
         tree_queue out_trees;
 
         for (int i = 0; i < n_estimators_m; ++i) {
-            todo_trees.base_queue_m.push(Tree(entropy_threshold_m, max_depth_m));
+            todo_trees.base_queue_m.push(Tree(entropy_threshold_m, max_depth_m, true));
         }
 
         build_trees(std::ref(tr_ds), std::ref(todo_trees), std::ref(out_trees));
@@ -71,8 +71,6 @@ public:
             std::vector<int> objects_subset = generate_subset(tr_ds.X.size());
 
             int n_features = tr_ds.X[0].size();
-            int n_leave = static_cast<int>(sqrt(n_features));
-//            std::vector<bool> feature_mask = generate_feature_mask(n_features, n_leave);
             std::vector<bool> feature_mask(n_features, false);
 
             Tree tree;
@@ -88,19 +86,6 @@ public:
             subset.push_back(rand() % len);
         }
         return subset;
-    }
-
-    std::vector<bool> generate_feature_mask(int n_features, int n_leave) {
-        std::vector<bool> feature_mask(n_features, false);
-        int n_filled = 0;
-
-        while ((n_features - n_filled) > n_leave) {
-            int pos = rand() % n_features;
-            feature_mask[pos] = true;
-            n_filled = std::accumulate(feature_mask.begin(), feature_mask.end(), 0);
-        }
-
-        return feature_mask;
     }
 
     target_type predict(feature_matrix_type& X) {
@@ -145,10 +130,10 @@ int main() {
 //    std::cout << train_dataset.y.size() << std::endl;
 
 
-//    Tree model(0.1, 10);
+//    Tree model(0.1, 10, true);
 //    model.fit(train_dataset);
 
-    RandomForest model(20, 10, 42 ,0.1);
+    RandomForest model(20, 20, 42 ,0.1);
     model.fit(train_dataset);
 
     auto train_preds = model.predict(train_dataset.X);
@@ -159,8 +144,5 @@ int main() {
     auto val_score = accuracy_score(val_dataset.y, val_preds);
     std::cout << "validation score: " << val_score << std::endl;
 
-//    for (auto p: val_preds) {
-//        std::cout << p << " ";
-//    }
     return 0;
 }

@@ -36,29 +36,38 @@ double calc_info_gain(
 
 
 TreeNode::TreeNode(
-        dataset& ds,
-        std::vector<int> objects,
-        std::vector<bool> used_features,
-        double entropy_threshold,
-        int depth,
-        int max_depth
+    dataset& ds,
+    std::vector<int> objects,
+    std::vector<bool> used_features,
+    double entropy_threshold,
+    int depth,
+    int max_depth,
+    bool use_random_features
 )
-: ds_m(ds)
-, entropy_threshold_m(entropy_threshold)
-, objects_m(std::move(objects))
-, used_features_m(std::move(used_features))
-, depth_m(depth)
-, max_depth_m(max_depth)
+    : ds_m(ds)
+    , entropy_threshold_m(entropy_threshold)
+    , objects_m(std::move(objects))
+    , used_features_m(std::move(used_features))
+    , depth_m(depth)
+    , max_depth_m(max_depth)
+    , use_random_features_m(use_random_features)
 {
     build();
 }
 
 
-TreeNode::TreeNode(dataset& ds, double entropy_threshold, int depth, int max_depth)
-        : ds_m(ds)
-        , entropy_threshold_m(entropy_threshold)
-        , depth_m(depth)
-        , max_depth_m(max_depth)
+TreeNode::TreeNode(
+    dataset& ds,
+    double entropy_threshold,
+    int depth,
+    int max_depth,
+    bool use_random_features
+)
+    : ds_m(ds)
+    , entropy_threshold_m(entropy_threshold)
+    , depth_m(depth)
+    , max_depth_m(max_depth)
+    , use_random_features_m(use_random_features)
 {
     for (int i = 0; i < ds_m.X.size(); i++) {
         objects_m.push_back(i);
@@ -119,9 +128,23 @@ void TreeNode::add_leaf(std::shared_ptr<TreeNode>& leaf, bool is_left) {
                 leaf_objects,
                 leaf_used_features,
                 entropy_threshold_m,
-                depth_m+1, max_depth_m
+                depth_m+1, max_depth_m,
+                use_random_features_m
         );
     }
+}
+
+std::vector<bool> TreeNode::generate_feature_mask(int n_features, int n_leave) {
+    std::vector<bool> feature_mask(n_features, false);
+    int n_filled = 0;
+
+    while ((n_features - n_filled) > n_leave) {
+        int pos = rand() % n_features;
+        feature_mask[pos] = true;
+        n_filled = std::accumulate(feature_mask.begin(), feature_mask.end(), 0);
+    }
+
+    return feature_mask;
 }
 
 void TreeNode::build() {
@@ -135,9 +158,23 @@ void TreeNode::build() {
     }
 
     std::map<int, double> info_gains;
-    for (int ftr = 0; ftr < ds_m.X[0].size(); ++ftr) {
-        if (used_features_m[ftr]) continue;
 
+    std::vector<int> node_features;
+    int n_features = static_cast<int>(ds_m.X[0].size()) - num_used_features_m;
+    int n_leave = static_cast<int>(sqrt(n_features));
+    std::vector<bool> feature_mask = generate_feature_mask(n_features, n_leave);
+    // TODO ugly code, rewrite
+    int ftr_count = 0;
+    for (int i = 0; i < ds_m.X[0].size(); ++i) {
+        if (!used_features_m[i]) {
+            if (feature_mask[ftr_count] || !use_random_features_m) {
+                node_features.push_back(i);
+            }
+            ++ftr_count;
+        }
+    }
+
+    for (auto& ftr: node_features) {
         std::vector<int> left_objects = get_leaf_objects(ftr, true);
         target_type left_target = get_leaf_targets(left_objects);
 
@@ -182,13 +219,19 @@ int TreeNode::get_answer() {
 }
 
 
-Tree::Tree(double entropy_threshold, int max_depth)
+Tree::Tree(double entropy_threshold, int max_depth, bool use_random_features)
         : entropy_threshold_m(entropy_threshold)
         , max_depth_m(max_depth)
+        , use_random_features_m(use_random_features)
 {}
 
 void Tree::fit(dataset& tr_ds) {
-    root_m = std::make_shared<TreeNode>(tr_ds, entropy_threshold_m, 1, max_depth_m);
+    root_m = std::make_shared<TreeNode>(
+        tr_ds,
+        entropy_threshold_m,
+        1, max_depth_m,
+        use_random_features_m
+    );
 }
 
 void Tree::fit(
@@ -201,7 +244,8 @@ void Tree::fit(
         objects,
         used_features,
         entropy_threshold_m,
-        1, max_depth_m
+        1, max_depth_m,
+        use_random_features_m
     );
 }
 

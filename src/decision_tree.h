@@ -12,6 +12,7 @@
 #include <memory>
 #include <cmath>
 #include <numeric>
+#include <cstdlib>
 
 #include "data.h"
 
@@ -38,22 +39,31 @@ class TreeNode {
     double node_entropy = 0.0;
     double entropy_threshold_m = 0.0;
 
+    bool use_random_features_m;
+
 public:
     std::shared_ptr<TreeNode> left_m;
     std::shared_ptr<TreeNode> right_m;
 
     int ftr_to_split_m{};
 
-    explicit TreeNode(
-            dataset& ds,
-            std::vector<int> objects,
-            std::vector<bool> used_features,
-            double entropy_threshold,
-            int depth,
-            int max_depth
+    TreeNode(
+        dataset& ds,
+        std::vector<int> objects,
+        std::vector<bool> used_features,
+        double entropy_threshold,
+        int depth,
+        int max_depth,
+        bool use_random_features=false
     );
 
-    explicit TreeNode(dataset& ds, double entropy_threshold, int depth, int max_depth);
+    TreeNode(
+        dataset& ds,
+        double entropy_threshold,
+        int depth,
+        int max_depth,
+        bool use_random_features=false
+    );
 
     bool check_stop_criteria();
 
@@ -62,6 +72,8 @@ public:
     target_type get_leaf_targets(std::vector<int>& leaf_objects);
 
     void add_leaf(std::shared_ptr<TreeNode>& leaf, bool is_left);
+
+    std::vector<bool> generate_feature_mask(int n_features, int n_leave);
 
     void build();
 
@@ -73,11 +85,12 @@ class Tree {
     double entropy_threshold_m = 0.0;
     int max_depth_m = 0.0;
     std::shared_ptr<TreeNode> root_m;
+    bool use_random_features_m = false;
 
 public:
     Tree() = default;
 
-    Tree(double entropy_threshold, int max_depth);
+    Tree(double entropy_threshold, int max_depth, bool use_random_features=false);
 
     void fit(dataset& tr_ds);
 
